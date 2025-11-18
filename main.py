@@ -1,34 +1,133 @@
 import os
+import markdown
 from dotenv import load_dotenv
-from langchain_community.tools.tavily_search import TavilySearchResults
 
-# .env ফাইল থেকে API Key গুলো লোড করি
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.tools.tavily_search import TavilySearchResults
+from langgraph.prebuilt import create_react_agent
+
 load_dotenv()
 
-# Tavily Search টুলটি পরীক্ষা করা হচ্ছে
-print("Tavily Search টুল পরীক্ষা করা হচ্ছে...")
+tools = [TavilySearchResults(max_results=3)]
+
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.0-flash", 
+    temperature=0.4
+)
+
+print("AI Study-Buddy is running\n")
 
 try:
-    # LangChain নিজে থেকেই .env ফাইল থেকে "TAVILY_API_KEY" খুঁজে নেবে
-    # k=3 মানে হলো আমরা সেরা ৩টি সার্চ রেজাল্ট দেখতে চাই
-    search_tool = TavilySearchResults(k=3)
+    agent_executor = create_react_agent(llm, tools)
 
-    # চলুন টুলটিকে একটি সহজ জিনিস সার্চ করতে বলি
-    search_query = "What is the latest news about Python programming language?"
-    results = search_tool.invoke(search_query)
+    print("\n" + "-"*50)
+    user_topic = input("Which topic do you want to learn? (e.g., Newton's 3rd Law): ")
+    print("-" * 50 + "\n")
 
-    # সার্চ রেজাল্টগুলো প্রিন্ট করি
-    print(f"\n--- '{search_query}'-এর জন্য Tavily-এর সার্চ রেজাল্ট ---")
+    query = f"""
+    You are an expert teacher who explains complex topics to Bangladeshi students in simple Bangla.
+    
+    Topic: '{user_topic}'
 
-    # Tavily রেজাল্টগুলোকে একটি লিস্ট হিসেবে দেয়
-    for res in results:
-        print(f"URL: {res.get('url')}")
-        print(f"Content: {res.get('content')[:150]}...") # কন্টেন্ট খুব লম্বা হতে পারে, তাই প্রথম ১৫০ অক্ষর দেখাচ্ছি
-        print("------------------------")
+    Please create a comprehensive study note on this topic. The structure must be:
+    
+    1. Simple Definition (Definition): Explain in easy-to-understand Bengali.
+    2. Real-life Bangladeshi Example: 
+       - Provide a relatable example from the daily life of a Bangladeshi person.
+       - Use contexts like rickshaws, traffic jams, cricket, tea stalls, or local markets.
+    3. Pros and Cons: Provide these in bullet points.
+    
+    The entire response must be in Bengali (Bangla) and well-formatted (Bold, Tables).
+    """
+
+    print(f"🔍 Researching '{user_topic}'...\n")
+
+    response = agent_executor.invoke({"messages": [("user", query)]})
+
+    raw_content = response["messages"][-1].content
+    final_answer = ""
+    
+    if isinstance(raw_content, list):
+        for block in raw_content:
+            if isinstance(block, dict) and "text" in block:
+                final_answer += block["text"]
+            else:
+                final_answer += str(block)
+    else:
+        final_answer = str(raw_content)
+    
+    print("Note generation complete!")
+
+    html_content = markdown.markdown(final_answer, extensions=['tables'])
+
+    html_template = f"""
+    <!DOCTYPE html>
+    <html lang="bn">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Study Note: {user_topic}</title>
+        <style>
+            body {{
+                font-family: 'SolaimanLipi', 'Kalpurush', 'Arial', sans-serif;
+                line-height: 1.8;
+                max-width: 800px;
+                width: 90%;
+                margin: 0 auto;
+                padding: 20px;
+                background-color: #f0f2f5;
+                color: #333;
+            }}
+            .container {{
+                background: white;
+                padding: 25px;
+                border-radius: 15px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            }}
+            h1 {{ text-align: center; color: #006a4e; margin-bottom: 10px; }}
+            h2 {{ color: #c0392b; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 30px; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+            th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; }}
+            th {{ background-color: #006a4e; color: white; }}
+            tr:nth-child(even) {{ background-color: #f9f9f9; }}
+            
+            @media only screen and (max-width: 600px) {{
+                h1 {{ font-size: 1.5em; }}
+                .container {{ padding: 15px; }}
+                .table-wrapper {{ overflow-x: auto; -webkit-overflow-scrolling: touch; }}
+                table {{ min-width: 500px; }}
+            }}
+            .footer {{ margin-top: 30px; text-align: center; font-size: 0.8em; color: #666; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>{user_topic}</h1>
+            <hr style="border:0; height:1px; background:#ddd;">
+            
+            <div class="table-wrapper">
+                {html_content.replace('<table>', '<div class="table-wrapper"><table>').replace('</table>', '</table></div>')}
+            </div>
+
+            <div class="footer">Generated by AI Study-Buddy 🇧🇩</div>
+        </div>
+    </body>
+    </html>
+    """
+
+    safe_filename = user_topic.replace("?", "").replace(":", "").replace("/", "-").replace("\\", "-").strip()
+    
+    if not safe_filename:
+        safe_filename = "study_note"
+        
+    filename = f"{safe_filename}.html"
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(html_template)
+        
+    print(f"Report saved as: '{filename}'")
+    print("Double-click the file to open it in your browser.")
 
 except Exception as e:
-    print("\n--- একটি সমস্যা হয়েছে! ---")
-    print(f"Error: {e}")
-    print("\nদয়া করে চেক করুন:")
-    print("১. আপনার .env ফাইলে 'TAVILY_API_KEY' ঠিকভাবে সেট করা আছে কি না।")
-    print("২. আপনার ইন্টারনেট কানেকশন চালু আছে কি না।")
+    print("\nAn Error Occurred")
+    print(f"Error Details: {e}")
