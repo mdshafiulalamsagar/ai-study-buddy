@@ -21,26 +21,34 @@ try:
     agent_executor = create_react_agent(llm, tools)
 
     print("\n" + "-"*50)
-    user_topic = input("Which topic do you want to learn? (e.g., Newton's 3rd Law): ")
+    topic = input("Which topic do you want to learn? (e.g., Newton's 3rd Law): ")
     print("-" * 50 + "\n")
 
     query = f"""
-    You are an expert teacher who explains complex topics to Bangladeshi students in simple Bangla.
-    
-    Topic: '{user_topic}'
+                You are an expert teacher explaining complex topics to Bangladeshi students in simple Bangla.
+                
+                Topic: '{topic}'
+                
+                Create a study note in Bangla (Bengali) with:
+                
+                1. Simple Definition: Easy to understand.
+                
+                2. A Unique & Context-Aware Bangladeshi Example:
+                   - STOP giving the same 'rickshaw' example.
+                   - Choose the BEST matching scenario (Village, Urban, Market, Food, Sports, etc.).
+                   - Make it fun and specific.
 
-    Please create a comprehensive study note on this topic. The structure must be:
-    
-    1. Simple Definition (Definition): Explain in easy-to-understand Bengali.
-    2. Real-life Bangladeshi Example: 
-       - Provide a relatable example from the daily life of a Bangladeshi person.
-       - Use contexts like rickshaws, traffic jams, cricket, tea stalls, or local markets.
-    3. Pros and Cons: Provide these in bullet points.
-    
-    The entire response must be in Bengali (Bangla) and well-formatted (Bold, Tables).
-    """
+                3. Pros and Cons:
+                   - MUST use a Markdown Table for this.
+                
+                IMPORTANT FORMATTING RULES:
+                - Use standard Markdown syntax.
+                - Do NOT use excessive hyphens (----) or try to draw borders.
+                - Just use | Header | and |---| separators strictly.
+                - Do NOT add a bottom border line.
+                """
 
-    print(f"🔍 Researching '{user_topic}'...\n")
+    print(f"🔍 Researching '{topic}'...\n")
 
     response = agent_executor.invoke({"messages": [("user", query)]})
 
@@ -66,7 +74,7 @@ try:
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Study Note: {user_topic}</title>
+        <title>Study Note: {topic}</title>
         <style>
             body {{
                 font-family: 'SolaimanLipi', 'Kalpurush', 'Arial', sans-serif;
@@ -102,7 +110,7 @@ try:
     </head>
     <body>
         <div class="container">
-            <h1>{user_topic}</h1>
+            <h1>{topic}</h1>
             <hr style="border:0; height:1px; background:#ddd;">
             
             <div class="table-wrapper">
@@ -115,7 +123,7 @@ try:
     </html>
     """
 
-    safe_filename = user_topic.replace("?", "").replace(":", "").replace("/", "-").replace("\\", "-").strip()
+    safe_filename = topic.replace("?", "").replace(":", "").replace("/", "-").replace("\\", "-").strip()
     
     if not safe_filename:
         safe_filename = "study_note"
