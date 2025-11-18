@@ -2,7 +2,7 @@
 
 **AI Study Buddy** is a smart, AI-powered educational assistant tailored for Bangladeshi students. It explains complex topics in simple Bengali, provides relatable local examples (like rickshaws, cricket, tea stalls), and generates formatted study notes.
 
-🔗 **Live Demo:** https://aistudy-buddy.streamlit.app/
+🔗 **Live Demo:** [Click Here to Use the App](https://aistudy-buddy.streamlit.app/)
 
 ---
 
